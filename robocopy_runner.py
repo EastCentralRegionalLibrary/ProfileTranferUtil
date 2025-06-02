@@ -2,6 +2,7 @@ import os
 import subprocess
 import logging
 from typing import List, Optional
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from constants import ROBOCOPY_OPTIONS
 
 logger = logging.getLogger(__name__)
@@ -167,28 +168,43 @@ def copy_appdata_subdirs(
     dry_run: bool = False,
 ):
     """
-    Copies individual AppData subfolders (e.g. MRU, browsers) one at a time.
+    Copies individual AppData subfolders in parallel using threads.
 
     Args:
         source_root (str): UNC path to profile root.
         dest_root (str): Local destination profile root.
         subdirs (List[str]): Relative paths to subfolders under AppData to include.
         exclude_dirs (List[str], optional): Folders to exclude from each subdir sync.
-        dry_run (bool): If True, only simulate.
+        dry_run (bool): If True, simulate only.
     """
-    for rel_path in subdirs:
+
+    def copy_single_subdir(rel_path: str):
         src = os.path.join(source_root, rel_path)
         dst = os.path.join(dest_root, rel_path)
 
-        if not dry_run :
-            logger.info(f"Creating AppData subfolder: {rel_path}")
+        if not dry_run:
+            logger.info(f"[Thread] Creating AppData subfolder: {rel_path}")
             os.makedirs(dst, exist_ok=True)
         else:
-            logger.info(f"Skipped creating AppData subfolder: {rel_path}")
+            logger.info(f"[Thread] Skipping folder creation (dry run): {rel_path}")
 
-        robocopy_folder(
+        return robocopy_folder(
             source=src,
             destination=dst,
             exclude_dirs=exclude_dirs,
             dry_run=dry_run,
         )
+
+    logger.info(f"Starting threaded copy of {len(subdirs)} AppData subfolders...")
+    with ThreadPoolExecutor(max_workers=min(6, len(subdirs))) as executor:
+        futures = {
+            executor.submit(copy_single_subdir, subdir): subdir for subdir in subdirs
+        }
+
+        for future in as_completed(futures):
+            subdir = futures[future]
+            try:
+                exit_code = future.result()
+                logger.info(f"[Thread] Finished {subdir} with exit code {exit_code}")
+            except Exception as e:
+                logger.exception(f"[Thread] Error copying {subdir}: {e}")

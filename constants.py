@@ -9,12 +9,12 @@ ROBOCOPY_PROFILE_SUBPATH = "C$\\Users"
 ROBOCOPY_OPTIONS = [
     "/S",  # Copy subdirectories, not including empty ones
     "/Z",  # Restartable mode (useful for flaky networks)
-    "/MT:8",  # Multi-threaded copy (8 threads — adjust based on environment)
+    # "/MT:8",  # Multi-threaded copy (8 threads is robocopy default — adjust based on environment)
     "/R:3",  # Retry 3 times on failed copies
     "/W:5",  # Wait 5 seconds between retries
-    "/NFL",  # No file list (speeds up logging)
-    "/NDL",  # No directory list
-    "/NP",  # No progress shown in output
+    # "/NFL",  # No file list (speeds up logging)
+    # "/NDL",  # No directory list
+    # "/NP",  # No progress shown in output
 ]
 
 # Files known to be machine-specific, unneeded, or locked (registry hives, temp system files)
@@ -29,8 +29,8 @@ ROBOCOPY_EXCLUDE_FILES = [
 
 # Subfolders within included folders (e.g., Chrome) that should be skipped due to size or irrelevance
 ROBOCOPY_EXCLUDE_DIRS = [
-    "Default\\Cache",
-    "Default\\Code Cache",
+    "AppData\\Local\\Google\\Chrome\\User Data\\Default\\Cache",
+    "AppData\\Local\\Google\\Chrome\\User Data\\Default\\Code Cache",
 ]
 
 # Folders under AppData\Local worth migrating to preserve user data and settings
