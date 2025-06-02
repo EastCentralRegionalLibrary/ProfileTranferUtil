@@ -5,7 +5,7 @@ import main
 
 @patch("main.copy_profile_root")
 @patch("main.copy_appdata_subdirs")
-@patch("main.prompt_for_input", side_effect=["RemotePC", "jdoe", "C:\\Backup", "y"])
+@patch("main.prompt_for_input", side_effect=["RemotePC", "jdoe", "C:\\Backup", "y", "y"])
 @patch("main.check_unc_access", return_value=True)
 @patch("main.ensure_directory")
 @patch("main.remove_mark_of_the_web_from_shortcuts")

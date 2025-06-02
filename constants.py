@@ -31,11 +31,14 @@ ROBOCOPY_EXCLUDE_FILES = [
 ROBOCOPY_EXCLUDE_DIRS = [
     "AppData\\Local\\Google\\Chrome\\User Data\\Default\\Cache",
     "AppData\\Local\\Google\\Chrome\\User Data\\Default\\Code Cache",
+    "AppData\\Local\\Microsoft\\Edge\\User Data\\Default\\Cache",
+    "AppData\\Local\\Microsoft\\Edge\\User Data\\Default\\Code Cache",
 ]
 
 # Folders under AppData\Local worth migrating to preserve user data and settings
 APPDATA_LOCAL_INCLUDE_DIRS = [
     "AppData\\Local\\Google\\Chrome\\User Data\\Default",
+    "AppData\\Local\\Microsoft\\Edge\\User Data\\Default",
     "AppData\\Local\\Mozilla",
     "AppData\\Local\\MarchNetworks",
     "AppData\\Local\\OpenILS",

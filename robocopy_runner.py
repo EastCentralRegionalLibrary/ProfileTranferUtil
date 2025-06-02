@@ -84,19 +84,21 @@ def run_robocopy(
         return 0
 
     try:
-        result = subprocess.run(
+        process = subprocess.Popen(
             cmd,
             stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            text=True,
-            check=False,
+            stderr=subprocess.STDOUT,  # Merge stderr into stdout
+            text=True,  # Decode output as text
+            bufsize=1,  # Line-buffered reading
         )
-        logger.info(result.stdout)
-        if result.stderr:
-            logger.warning(result.stderr)
+        # Stream each line as it comes in
+        if process.stdout:
+            for line in process.stdout:
+                logger.info(line.rstrip())
 
-        logger.info(f"RoboCopy exited with code {result.returncode}")
-        return result.returncode
+        returncode = process.wait()
+        logger.info(f"RoboCopy exited with code {returncode}")
+        return returncode
 
     except Exception as e:
         logger.exception(f"Failed to execute RoboCopy: {e}")

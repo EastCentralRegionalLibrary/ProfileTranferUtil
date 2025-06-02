@@ -140,6 +140,7 @@ def main():
     remove_mark_of_the_web_from_shortcuts(desktop_path)
 
     logger.info("Profile transfer complete.")
+    confirm = prompt_for_input("Please review output ( press any key to exit )", default="y")
     sys.exit(0)
 
 
