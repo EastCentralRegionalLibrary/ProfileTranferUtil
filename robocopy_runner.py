@@ -1,0 +1,194 @@
+import os
+import subprocess
+import logging
+from typing import List, Optional
+from constants import ROBOCOPY_OPTIONS
+
+logger = logging.getLogger(__name__)
+
+
+def build_robocopy_command(
+    source: str,
+    destination: str,
+    base_options: Optional[List[str]] = None,
+    exclude_dirs: Optional[List[str]] = None,
+    exclude_files: Optional[List[str]] = None,
+) -> List[str]:
+    """
+    Constructs a RoboCopy command list from parameters.
+
+    Args:
+        source (str): Source directory.
+        destination (str): Destination directory.
+        base_options (List[str], optional): Core options to apply.
+        exclude_dirs (List[str], optional): Subdirectory names or paths to exclude.
+        exclude_files (List[str], optional): File names or patterns to exclude.
+
+    Returns:
+        List[str]: A complete RoboCopy command suitable for subprocess.
+    """
+    cmd = ["robocopy", source, destination]
+
+    # Add base options safely
+    if base_options:
+        cmd.extend(base_options)
+
+    # Add directory exclusions
+    if exclude_dirs:
+        cmd.append("/XD")
+        cmd.extend(exclude_dirs)
+
+    # Add file exclusions
+    if exclude_files:
+        cmd.append("/XF")
+        cmd.extend(exclude_files)
+
+    return cmd
+
+
+def run_robocopy(
+    source: str,
+    destination: str,
+    additional_options: Optional[List[str]] = None,
+    exclude_dirs: Optional[List[str]] = None,
+    exclude_files: Optional[List[str]] = None,
+    dry_run: bool = False,
+) -> int:
+    """
+    Executes RoboCopy from source to destination, applying given options.
+
+    Args:
+        source (str): Source directory (UNC or local).
+        destination (str): Destination directory (local).
+        additional_options (List[str], optional): RoboCopy switches beyond defaults.
+        exclude_dirs (List[str], optional): Directory paths (relative to source) to exclude.
+        exclude_files (List[str], optional): File patterns to exclude.
+        dry_run (bool): If True, logs the command without executing.
+
+    Returns:
+        int: RoboCopy's exit code.
+    """
+    cmd = build_robocopy_command(
+        source,
+        destination,
+        base_options=(ROBOCOPY_OPTIONS + (additional_options or [])),
+        exclude_dirs=exclude_dirs,
+        exclude_files=exclude_files,
+    )
+
+    logger.info(f"Running RoboCopy command:\n{' '.join(cmd)}")
+
+    if dry_run:
+        logger.info("[Dry Run] Command not executed.")
+        return 0
+
+    try:
+        result = subprocess.run(
+            cmd,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+            check=False,
+        )
+        logger.info(result.stdout)
+        if result.stderr:
+            logger.warning(result.stderr)
+
+        logger.info(f"RoboCopy exited with code {result.returncode}")
+        return result.returncode
+
+    except Exception as e:
+        logger.exception(f"Failed to execute RoboCopy: {e}")
+        return -1
+
+
+def robocopy_folder(
+    source: str,
+    destination: str,
+    exclude_files: Optional[List[str]] = None,
+    exclude_dirs: Optional[List[str]] = None,
+    options: Optional[List[str]] = None,
+    dry_run: bool = False,
+) -> int:
+    """
+    Wrapper for RoboCopy with simplified interface for one folder.
+
+    Args:
+        source (str): Full source path.
+        destination (str): Destination path.
+        exclude_files (List[str], optional): Files to exclude.
+        exclude_dirs (List[str], optional): Directories to exclude.
+        options (List[str], optional): Extra RoboCopy options (default is empty list).
+        dry_run (bool): If True, do not execute.
+
+    Returns:
+        int: RoboCopy exit code.
+    """
+    return run_robocopy(
+        source=source,
+        destination=destination,
+        additional_options=options,
+        exclude_dirs=exclude_dirs,
+        exclude_files=exclude_files,
+        dry_run=dry_run,
+    )
+
+
+def copy_profile_root(
+    source_root: str,
+    dest_root: str,
+    exclude_files: Optional[List[str]] = None,
+    dry_run: bool = False,
+):
+    """
+    Copies the root of a user's profile directory excluding AppData and sensitive files.
+
+    Args:
+        source_root (str): UNC path to the user profile root.
+        dest_root (str): Local destination path.
+        exclude_files (List[str], optional): Sensitive files to skip.
+        dry_run (bool): If True, do not actually copy files.
+    """
+    logger.info("Copying user profile root (excluding AppData)...")
+    robocopy_folder(
+        source=source_root,
+        destination=dest_root,
+        exclude_dirs=["AppData"],
+        exclude_files=exclude_files,
+        dry_run=dry_run,
+    )
+
+
+def copy_appdata_subdirs(
+    source_root: str,
+    dest_root: str,
+    subdirs: List[str],
+    exclude_dirs: Optional[List[str]] = None,
+    dry_run: bool = False,
+):
+    """
+    Copies individual AppData subfolders (e.g. MRU, browsers) one at a time.
+
+    Args:
+        source_root (str): UNC path to profile root.
+        dest_root (str): Local destination profile root.
+        subdirs (List[str]): Relative paths to subfolders under AppData to include.
+        exclude_dirs (List[str], optional): Folders to exclude from each subdir sync.
+        dry_run (bool): If True, only simulate.
+    """
+    for rel_path in subdirs:
+        src = os.path.join(source_root, rel_path)
+        dst = os.path.join(dest_root, rel_path)
+
+        if not dry_run :
+            logger.info(f"Creating AppData subfolder: {rel_path}")
+            os.makedirs(dst, exist_ok=True)
+        else:
+            logger.info(f"Skipped creating AppData subfolder: {rel_path}")
+
+        robocopy_folder(
+            source=src,
+            destination=dst,
+            exclude_dirs=exclude_dirs,
+            dry_run=dry_run,
+        )
