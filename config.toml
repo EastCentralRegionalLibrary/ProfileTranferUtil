@@ -2,7 +2,7 @@
 
 [profile]
 # Default UNC path to users folder on remote / source
-USER_PROFILE_SUBPATH = "C`$\\Users"
+USER_PROFILE_SUBPATH = "C$\\Users"
 
 [robocopy]
 # Common RoboCopy options (robust + multithreaded + restartable + logging-friendly)

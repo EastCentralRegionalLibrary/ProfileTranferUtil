@@ -7,6 +7,29 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 logger = logging.getLogger(__name__)
 
 
+
+def resolve_exclude_paths(base_path: str, relative_excludes: Optional[List[str]]) -> Optional[List[str]]:
+    """
+    Resolves a list of relative directory names into full absolute paths
+    under a given base directory. This is useful for building accurate /XD
+    exclusions for RoboCopy, especially when copying from administrative
+    shares like \\HOST\\C$ where relative paths are ignored.
+
+    Args:
+        base_path (str): The absolute source path to use as root.
+        relative_excludes (List[str], optional): A list of directory names
+            or relative paths to exclude.
+
+    Returns:
+        List[str] or None: A list of fully resolved exclusion paths, or None
+        if no exclusions are provided.
+    """
+    if not relative_excludes:
+        return None
+
+    return [os.path.join(base_path, rel_path) for rel_path in relative_excludes]
+
+
 def quote_path(path: str) -> str:
     """
     Wraps a file path in double quotes to handle spaces and special characters.
@@ -169,11 +192,12 @@ def copy_profile_root(
         dry_run (bool): If True, do not actually copy files.
     """
     logger.info("Copying user profile root (excluding AppData)...")
+
     robocopy_folder(
         ROBOCOPY_OPTIONS,
         source=source_root,
         destination=dest_root,
-        exclude_dirs=["AppData"],
+        exclude_dirs=[source_root+"\\AppData"],
         exclude_files=exclude_files,
         dry_run=dry_run,
     )
@@ -212,7 +236,7 @@ def copy_appdata_subdirs(
             ROBOCOPY_OPTIONS,
             source=src,
             destination=dst,
-            exclude_dirs=exclude_dirs,
+            exclude_dirs=resolve_exclude_paths(source_root, exclude_dirs),
             dry_run=dry_run,
         )
 

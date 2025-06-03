@@ -37,7 +37,7 @@ def test_main_dry_run(
     ) as mock_exit:
         main.main()
 
-    unc_path = r"\\RemotePC\C`$\Users\jdoe"
+    unc_path = r"\\RemotePC\C$\Users\jdoe"
     dest_path = r"C:\Backup"
 
     mock_copy_root.assert_called_once_with(
