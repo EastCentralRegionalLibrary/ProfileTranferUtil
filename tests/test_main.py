@@ -1,5 +1,6 @@
 import pytest
 from unittest.mock import patch, MagicMock
+from load_config import load_config
 import main
 
 
@@ -17,6 +18,20 @@ def test_main_dry_run(
     mock_copy_appdata,
     mock_copy_root,
 ):
+    
+    config = load_config()
+
+    USER_PROFILE_SUBPATH: str = config["profile"]["USER_PROFILE_SUBPATH"]
+    ROBOCOPY_OPTIONS: List[str] = config["robocopy"]["ROBOCOPY_OPTIONS"]
+    ROBOCOPY_EXCLUDE_FILES: List[str] = config["robocopy"]["ROBOCOPY_EXCLUDE_FILES"]
+    ROBOCOPY_EXCLUDE_DIRS: List[str] = config["robocopy"]["ROBOCOPY_EXCLUDE_DIRS"]
+    APPDATA_LOCAL_INCLUDE_DIRS: List[str] = config["robocopy"][
+        "APPDATA_LOCAL_INCLUDE_DIRS"
+    ]
+    APPDATA_ROAMING_INCLUDE_DIRS: List[str] = config["robocopy"][
+        "APPDATA_ROAMING_INCLUDE_DIRS"
+    ]
+
     with patch("main.sys.argv", ["main.py", "--dryrun"]), patch(
         "main.sys.exit"
     ) as mock_exit:
@@ -26,24 +41,27 @@ def test_main_dry_run(
     dest_path = r"C:\Backup"
 
     mock_copy_root.assert_called_once_with(
+        ROBOCOPY_OPTIONS,
         unc_path,
         dest_path,
-        exclude_files=main.ROBOCOPY_EXCLUDE_FILES,
+        exclude_files=ROBOCOPY_EXCLUDE_FILES,
         dry_run=True,
     )
     # The first call is for APPDATA_LOCAL_INCLUDE_DIRS
     mock_copy_appdata.assert_any_call(
+        ROBOCOPY_OPTIONS,
         unc_path,
         dest_path,
-        main.APPDATA_LOCAL_INCLUDE_DIRS,
-        exclude_dirs=main.ROBOCOPY_EXCLUDE_DIRS,
+        APPDATA_LOCAL_INCLUDE_DIRS,
+        exclude_dirs=ROBOCOPY_EXCLUDE_DIRS,
         dry_run=True,
     )
     # The second call is for APPDATA_ROAMING_INCLUDE_DIRS
     mock_copy_appdata.assert_any_call(
+        ROBOCOPY_OPTIONS,
         unc_path,
         dest_path,
-        main.APPDATA_ROAMING_INCLUDE_DIRS,
+        APPDATA_ROAMING_INCLUDE_DIRS,
         dry_run=True,
     )
     mock_remove_motw.assert_called_once()

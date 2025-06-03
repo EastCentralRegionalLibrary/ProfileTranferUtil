@@ -3,7 +3,6 @@ import subprocess
 import logging
 from typing import List, Optional
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from constants import ROBOCOPY_OPTIONS
 
 logger = logging.getLogger(__name__)
 
@@ -61,6 +60,7 @@ def build_robocopy_command(
 
 
 def run_robocopy(
+    ROBOCOPY_OPTIONS: List[str],
     source: str,
     destination: str,
     additional_options: Optional[List[str]] = None,
@@ -119,6 +119,7 @@ def run_robocopy(
 
 
 def robocopy_folder(
+    ROBOCOPY_OPTIONS: List[str],
     source: str,
     destination: str,
     exclude_files: Optional[List[str]] = None,
@@ -141,6 +142,7 @@ def robocopy_folder(
         int: RoboCopy exit code.
     """
     return run_robocopy(
+        ROBOCOPY_OPTIONS,
         source=source,
         destination=destination,
         additional_options=options,
@@ -151,6 +153,7 @@ def robocopy_folder(
 
 
 def copy_profile_root(
+    ROBOCOPY_OPTIONS: List[str],
     source_root: str,
     dest_root: str,
     exclude_files: Optional[List[str]] = None,
@@ -167,6 +170,7 @@ def copy_profile_root(
     """
     logger.info("Copying user profile root (excluding AppData)...")
     robocopy_folder(
+        ROBOCOPY_OPTIONS,
         source=source_root,
         destination=dest_root,
         exclude_dirs=["AppData"],
@@ -176,6 +180,7 @@ def copy_profile_root(
 
 
 def copy_appdata_subdirs(
+    ROBOCOPY_OPTIONS: List[str],
     source_root: str,
     dest_root: str,
     subdirs: List[str],
@@ -204,6 +209,7 @@ def copy_appdata_subdirs(
             logger.info(f"[Thread] Skipping folder creation (dry run): {rel_path}")
 
         return robocopy_folder(
+            ROBOCOPY_OPTIONS,
             source=src,
             destination=dst,
             exclude_dirs=exclude_dirs,

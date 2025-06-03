@@ -3,23 +3,28 @@ import os
 import sys
 import logging
 from pathlib import Path
+from typing import List
 from unc_utils import check_unc_access, prompt_user_to_authenticate
 from remove_motw import remove_mark_of_the_web_from_shortcuts
 from robocopy_runner import copy_profile_root, copy_appdata_subdirs
-from constants import (
-    APPDATA_LOCAL_INCLUDE_DIRS,
-    APPDATA_ROAMING_INCLUDE_DIRS,
-    ROBOCOPY_EXCLUDE_FILES,
-    ROBOCOPY_EXCLUDE_DIRS,
-    USER_PROFILE_SUBPATH,
-)
+from load_config import load_config
+
+# from constants import (
+#     APPDATA_LOCAL_INCLUDE_DIRS,
+#     APPDATA_ROAMING_INCLUDE_DIRS,
+#     ROBOCOPY_EXCLUDE_FILES,
+#     ROBOCOPY_EXCLUDE_DIRS,
+#     USER_PROFILE_SUBPATH,
+# )
 
 # Set up logger
 logging.basicConfig(level=logging.INFO, format="%(message)s")
 logger = logging.getLogger(__name__)
 
 
-def build_unc_source(remote_machine: str, user_name: str) -> str:
+def build_unc_source(
+    remote_machine: str, USER_PROFILE_SUBPATH: str, user_name: str
+) -> str:
     """
     Constructs the UNC path to the user's profile directory.
     """
@@ -84,11 +89,24 @@ def main():
         "Enter destination path", default=str(Path.cwd())
     )
 
+    config = load_config()
+
+    USER_PROFILE_SUBPATH: str = config["profile"]["USER_PROFILE_SUBPATH"]
+    ROBOCOPY_OPTIONS: List[str] = config["robocopy"]["ROBOCOPY_OPTIONS"]
+    ROBOCOPY_EXCLUDE_FILES: List[str] = config["robocopy"]["ROBOCOPY_EXCLUDE_FILES"]
+    ROBOCOPY_EXCLUDE_DIRS: List[str] = config["robocopy"]["ROBOCOPY_EXCLUDE_DIRS"]
+    APPDATA_LOCAL_INCLUDE_DIRS: List[str] = config["robocopy"][
+        "APPDATA_LOCAL_INCLUDE_DIRS"
+    ]
+    APPDATA_ROAMING_INCLUDE_DIRS: List[str] = config["robocopy"][
+        "APPDATA_ROAMING_INCLUDE_DIRS"
+    ]
+
     if not remote_machine or not user_name:
         logger.error("Remote machine name and username are required.")
         sys.exit(1)
 
-    unc_source = build_unc_source(remote_machine, user_name)
+    unc_source = build_unc_source(remote_machine, USER_PROFILE_SUBPATH, user_name)
     logger.info(f"\nUNC source: {unc_source}")
     logger.info(f"Destination: {destination}\n")
 
@@ -111,6 +129,7 @@ def main():
 
     # Step 4: Copy root profile data
     copy_profile_root(
+        ROBOCOPY_OPTIONS,
         unc_source,
         destination,
         exclude_files=ROBOCOPY_EXCLUDE_FILES,
@@ -119,6 +138,7 @@ def main():
 
     # Step 5: Copy AppData\Local subfolders
     copy_appdata_subdirs(
+        ROBOCOPY_OPTIONS,
         unc_source,
         destination,
         APPDATA_LOCAL_INCLUDE_DIRS,
@@ -128,6 +148,7 @@ def main():
 
     # Step 6: Copy AppData\Roaming subfolders
     copy_appdata_subdirs(
+        ROBOCOPY_OPTIONS,
         unc_source,
         destination,
         APPDATA_ROAMING_INCLUDE_DIRS,
@@ -140,7 +161,9 @@ def main():
     remove_mark_of_the_web_from_shortcuts(desktop_path)
 
     logger.info("Profile transfer complete.")
-    confirm = prompt_for_input("Please review output ( press any key to exit )", default="y")
+    confirm = prompt_for_input(
+        "Please review output ( press any key to exit )", default="y"
+    )
     sys.exit(0)
 
 

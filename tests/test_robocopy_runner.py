@@ -23,6 +23,16 @@ SUBDIRS = [
 ]
 EXCLUDE_FILES = ["NTUSER.DAT"]
 EXCLUDE_DIRS = ["Temp"]
+ROBOCOPY_OPTIONS = [
+    "/S",  # Copy subdirectories, not including empty ones
+    "/Z",  # Restartable mode (useful for flaky networks)
+    # "/MT:8",  # Multi-threaded copy (8 threads is robocopy default — adjust based on environment)
+    "/R:3",  # Retry 3 times on failed copies
+    "/W:5",  # Wait 5 seconds between retries
+    # "/NFL",  # No file list (speeds up logging)
+    # "/NDL",  # No directory list
+    # "/NP",  # No progress shown in output
+]
 
 
 @patch("subprocess.Popen")
@@ -33,13 +43,13 @@ def test_run_robocopy_success(mock_popen):
     mock_process.returncode = 0
     mock_popen.return_value = mock_process
 
-    code = run_robocopy(SOURCE, DEST, dry_run=False)
+    code = run_robocopy(ROBOCOPY_OPTIONS, SOURCE, DEST, dry_run=False)
     assert code == 0
 
 
 @patch("subprocess.Popen")
 def test_run_robocopy_dry_run(mock_popen):
-    code = run_robocopy(SOURCE, DEST, dry_run=True)
+    code = run_robocopy(ROBOCOPY_OPTIONS, SOURCE, DEST, dry_run=True)
     assert code == 0
     mock_popen.assert_not_called()
 
@@ -52,7 +62,7 @@ def test_robocopy_folder(mock_popen):
     mock_process.returncode = 1
     mock_popen.return_value = mock_process
 
-    code = robocopy_folder(SOURCE, DEST, EXCLUDE_FILES, EXCLUDE_DIRS)
+    code = robocopy_folder(ROBOCOPY_OPTIONS, SOURCE, DEST, EXCLUDE_FILES, EXCLUDE_DIRS)
     assert code == 1
 
 
@@ -64,7 +74,7 @@ def test_copy_profile_root(mock_popen):
     mock_process.returncode = 0
     mock_popen.return_value = mock_process
 
-    copy_profile_root(SOURCE, DEST, EXCLUDE_FILES)
+    copy_profile_root(ROBOCOPY_OPTIONS, SOURCE, DEST, EXCLUDE_FILES)
     args = mock_popen.call_args[0][0]
     assert "/XD" in args
     assert "/XF" in args
@@ -76,7 +86,7 @@ def test_copy_profile_root(mock_popen):
 def test_copy_appdata_subdirs(mock_robocopy_folder, mock_makedirs):
     mock_robocopy_folder.return_value = 0  # Simulate success
 
-    copy_appdata_subdirs(SOURCE, DEST, SUBDIRS, EXCLUDE_DIRS)
+    copy_appdata_subdirs(ROBOCOPY_OPTIONS, SOURCE, DEST, SUBDIRS, EXCLUDE_DIRS)
 
     assert mock_robocopy_folder.call_count == len(SUBDIRS)
 

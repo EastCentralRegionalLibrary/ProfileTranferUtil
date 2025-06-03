@@ -1,10 +1,10 @@
-# constants.py
+# config.toml
 
+[profile]
 # Default UNC path to users folder on remote / source
-USER_PROFILE_SUBPATH = r"C$\Users"
+USER_PROFILE_SUBPATH = "C$\\Users"
 
-ROBOCOPY_PROFILE_SUBPATH = "C$\\Users"
-
+[robocopy]
 # Common RoboCopy options (robust + multithreaded + restartable + logging-friendly)
 ROBOCOPY_OPTIONS = [
     "/S",  # Copy subdirectories, not including empty ones
