@@ -21,30 +21,28 @@ def test_check_unc_access_nonexistent_path():
     assert check_unc_access(r"\\This\Path\Should\Not\Exist") is False
 
 
-@mock.patch("subprocess.Popen")
-def test_prompt_user_to_authenticate_success(mock_popen):
-    """Test prompt_user_to_authenticate returns True when window is closed in time."""
-    mock_proc = mock.Mock()
-    mock_proc.poll.side_effect = [None, None, 0]  # Simulate closing after 3 loops
-    mock_popen.return_value = mock_proc
-
-    result = prompt_user_to_authenticate(r"\\FakeUNC\C$", timeout=5)
+@mock.patch("os.startfile")
+@mock.patch(
+    "os.path.exists", side_effect=[False, False, True]
+)  # simulate eventual access
+def test_prompt_user_to_authenticate_success(mock_exists, mock_startfile):
+    """Test prompt_user_to_authenticate returns True when UNC path becomes accessible."""
+    result = prompt_user_to_authenticate(r"\\FakeUNC\C$", timeout=5, interval=0.1)
     assert result is True
+    mock_startfile.assert_called_once_with(r"\\FakeUNC\C$")
 
 
-@mock.patch("subprocess.Popen")
-def test_prompt_user_to_authenticate_timeout(mock_popen):
-    """Test prompt_user_to_authenticate returns False on timeout."""
-    mock_proc = mock.Mock()
-    mock_proc.poll.return_value = None  # Never closes
-    mock_popen.return_value = mock_proc
-
-    result = prompt_user_to_authenticate(r"\\FakeUNC\C$", timeout=1)
+@mock.patch("os.startfile")
+@mock.patch("os.path.exists", return_value=False)
+def test_prompt_user_to_authenticate_timeout(mock_exists, mock_startfile):
+    """Test prompt_user_to_authenticate returns False on timeout without access."""
+    result = prompt_user_to_authenticate(r"\\FakeUNC\C$", timeout=0.3, interval=0.1)
     assert result is False
+    mock_startfile.assert_called_once_with(r"\\FakeUNC\C$")
 
 
-@mock.patch("subprocess.Popen", side_effect=Exception("Launch failed"))
-def test_prompt_user_to_authenticate_exception(mock_popen):
+@mock.patch("os.startfile", side_effect=Exception("Launch failed"))
+def test_prompt_user_to_authenticate_exception(mock_startfile):
     """Test prompt_user_to_authenticate returns False on exception."""
-    result = prompt_user_to_authenticate(r"\\FakeUNC\C$", timeout=1)
+    result = prompt_user_to_authenticate(r"\\FakeUNC\C$")
     assert result is False

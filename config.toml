@@ -2,13 +2,15 @@
 
 [profile]
 # Default UNC path to users folder on remote / source
-USER_PROFILE_SUBPATH = "C$\\Users"
+USER_PROFILE_SUBPATH = "C`$\\Users"
 
 [robocopy]
 # Common RoboCopy options (robust + multithreaded + restartable + logging-friendly)
 ROBOCOPY_OPTIONS = [
     "/S",  # Copy subdirectories, not including empty ones
     "/Z",  # Restartable mode (useful for flaky networks)
+    "/XJ",  # Exclude junction points to avoid recursion
+    "/SL",  # Exclude symlinks to avoid recursion
     # "/MT:8",  # Multi-threaded copy (8 threads is robocopy default — adjust based on environment)
     "/R:3",  # Retry 3 times on failed copies
     "/W:5",  # Wait 5 seconds between retries
