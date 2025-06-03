@@ -8,6 +8,19 @@ from constants import ROBOCOPY_OPTIONS
 logger = logging.getLogger(__name__)
 
 
+def quote_path(path: str) -> str:
+    """
+    Wraps a file path in double quotes to handle spaces and special characters.
+
+    Args:
+        path (str): The file or directory path to quote.
+
+    Returns:
+        str: The quoted path.
+    """
+    return f'"{path}"'
+
+
 def build_robocopy_command(
     source: str,
     destination: str,
@@ -28,7 +41,7 @@ def build_robocopy_command(
     Returns:
         List[str]: A complete RoboCopy command suitable for subprocess.
     """
-    cmd = ["robocopy", source, destination]
+    cmd = ["robocopy", quote_path(source), quote_path(destination)]
 
     # Add base options safely
     if base_options:
@@ -37,12 +50,12 @@ def build_robocopy_command(
     # Add directory exclusions
     if exclude_dirs:
         cmd.append("/XD")
-        cmd.extend(exclude_dirs)
+        cmd.extend(quote_path(d) for d in exclude_dirs)
 
     # Add file exclusions
     if exclude_files:
         cmd.append("/XF")
-        cmd.extend(exclude_files)
+        cmd.extend(quote_path(f) for f in exclude_files)
 
     return cmd
 
