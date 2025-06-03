@@ -40,7 +40,7 @@ def build_robocopy_command(
     Returns:
         List[str]: A complete RoboCopy command suitable for subprocess.
     """
-    cmd = ["robocopy", quote_path(source), quote_path(destination)]
+    cmd = ["robocopy", source, destination]
 
     # Add base options safely
     if base_options:

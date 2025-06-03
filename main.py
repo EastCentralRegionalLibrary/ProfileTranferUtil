@@ -1,4 +1,5 @@
 import argparse
+from datetime import datetime
 import os
 import sys
 import logging
@@ -18,8 +19,28 @@ from load_config import load_config
 # )
 
 # Set up logger
-logging.basicConfig(level=logging.INFO, format="%(message)s")
-logger = logging.getLogger(__name__)
+
+# Create a logs directory
+os.makedirs("logs", exist_ok=True)
+
+# Timestamped log filename
+log_filename = datetime.now().strftime("logs/sync_%Y%m%d_%H%M%S.log")
+
+# Set up root logger
+logger = logging.getLogger()
+logger.setLevel(logging.INFO)
+
+# Console handler
+console_handler = logging.StreamHandler()
+console_handler.setFormatter(logging.Formatter("%(message)s"))
+logger.addHandler(console_handler)
+
+# File handler
+file_handler = logging.FileHandler(log_filename, encoding="utf-8")
+file_handler.setFormatter(
+    logging.Formatter("%(asctime)s - %(levelname)s - %(message)s")
+)
+logger.addHandler(file_handler)
 
 
 def build_unc_source(

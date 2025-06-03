@@ -6,8 +6,10 @@ including access checks and authentication prompts using Windows Explorer.
 """
 
 import os
-import subprocess
 import time
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 def check_unc_access(unc_path: str) -> bool:
@@ -23,41 +25,38 @@ def check_unc_access(unc_path: str) -> bool:
     return os.path.exists(unc_path)
 
 
-def prompt_user_to_authenticate(unc_root: str, timeout: int = 120) -> bool:
+def prompt_user_to_authenticate(
+    unc_root: str, timeout: int = 120, interval: float = 2.0
+) -> bool:
     """
     Opens a UNC path in Windows Explorer to prompt authentication
-    and waits for the user to close the window.
+    and waits until the path becomes accessible.
 
     Args:
         unc_root (str): The root UNC path to open (e.g., \\\\RemotePC\\C$)
-        timeout (int): Maximum time in seconds to wait for user to close Explorer.
+        timeout (int): Maximum time in seconds to wait for authentication
+        interval (float): Seconds to wait between access checks
 
     Returns:
-        bool: True if the user closed the Explorer window within the timeout,
-              False if the timeout was reached or if Explorer failed to launch.
+        bool: True if the path became accessible within the timeout,
+              False otherwise.
     """
-    print(f"Launching Windows Explorer to authenticate UNC path:\n  {unc_root}")
+    logger.info(f"Launching Windows Explorer to authenticate UNC path:\n  {unc_root}")
 
     try:
-        # Start Explorer and monitor process
-        proc = subprocess.Popen(["explorer", unc_root], shell=False)
-
-        print(f"Waiting for the Explorer window to be closed (timeout = {timeout}s)...")
-
-        start_time = time.time()
-        while True:
-            if proc.poll() is not None:
-                print("Explorer window closed.")
-                return True
-
-            if time.time() - start_time >= timeout:
-                print(
-                    "Timeout reached. Proceeding without confirmation of authentication."
-                )
-                return False
-
-            time.sleep(1)
-
+        os.startfile(unc_root)
     except Exception as e:
-        print(f"Failed to launch Explorer: {e}")
+        logger.error(f"Failed to open UNC path: {e}")
         return False
+
+    logger.info(f"Waiting for UNC access (timeout = {timeout}s)...")
+
+    start_time = time.time()
+    while time.time() - start_time < timeout:
+        if os.path.exists(unc_root):
+            print("Access to UNC path confirmed.")
+            return True
+        time.sleep(interval)
+
+    logger.error("Timeout reached. UNC path is still inaccessible.")
+    return False

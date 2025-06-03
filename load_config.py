@@ -1,8 +1,11 @@
+import logging
 import os
 import shutil
 import sys
 from pathlib import Path
 import tomllib  # Python 3.11+
+
+logger = logging.getLogger(__name__)
 
 
 def resource_path(relative_path: str) -> str:
@@ -25,7 +28,7 @@ def load_config(config_path: str = "config.toml") -> dict:
         # Fallback to bundled config and copy it out
         default_config_path = resource_path("config.toml")
         shutil.copy(default_config_path, config_path)
-        print(f"[INFO] Default config.toml copied to {config_path}")
+        logger.info(f"[INFO] Default config.toml copied to {config_path}")
 
     with open(config_file, "rb") as f:
         return tomllib.load(f)
