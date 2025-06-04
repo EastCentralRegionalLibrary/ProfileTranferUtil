@@ -49,7 +49,7 @@ def build_unc_source(
     """
     Constructs the UNC path to the user's profile directory.
     """
-    return "\\\\" + remote_machine + "\\" + USER_PROFILE_SUBPATH + "\\" + user_name
+    return rf"\\{remote_machine}\{USER_PROFILE_SUBPATH}\{user_name}"
 
 
 def prompt_for_input(prompt_text: str, default: str = None) -> str:
@@ -135,7 +135,7 @@ def main():
     # Step 1: Verify UNC access or prompt authentication
     if not check_unc_access(unc_source):
         logger.warning("UNC path not accessible. Attempting authentication...")
-        success = prompt_user_to_authenticate(rf"\\{remote_machine}\\C$")
+        success = prompt_user_to_authenticate(rf"\\{remote_machine}")
         if not success or not check_unc_access(unc_source):
             logger.error("UNC path still inaccessible. Exiting.")
             sys.exit(1)

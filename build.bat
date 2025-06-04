@@ -1,0 +1,1 @@
+pyinstaller main.py --onefile --add-data "config.toml;." --name ProfileSync

@@ -6,6 +6,7 @@ including access checks and authentication prompts using Windows Explorer.
 """
 
 import os
+import subprocess
 import time
 import logging
 
@@ -33,7 +34,7 @@ def prompt_user_to_authenticate(
     and waits until the path becomes accessible.
 
     Args:
-        unc_root (str): The root UNC path to open (e.g., \\\\RemotePC\\C$)
+        unc_root (str): The root UNC path to open (e.g., \\\\RemotePC)
         timeout (int): Maximum time in seconds to wait for authentication
         interval (float): Seconds to wait between access checks
 
@@ -42,14 +43,19 @@ def prompt_user_to_authenticate(
               False otherwise.
     """
     logger.info(f"Launching Windows Explorer to authenticate UNC path:\n  {unc_root}")
+    logger.info(f"cmd /c explorer {unc_root}")
 
     try:
-        os.startfile(unc_root)
+        # os.startfile(unc_root)
+        subprocess.Popen(
+            f"cmd /c explorer {unc_root}",
+            shell=True,
+        )
     except Exception as e:
         logger.error(f"Failed to open UNC path: {e}")
         return False
 
-    logger.info(f"Waiting for UNC access (timeout = {timeout}s)...")
+    logger.info(f"Waiting for UNC access (timeout = {timeout}s, delay = {interval}s)...")
 
     start_time = time.time()
     while time.time() - start_time < timeout:
@@ -57,6 +63,8 @@ def prompt_user_to_authenticate(
             print("Access to UNC path confirmed.")
             return True
         time.sleep(interval)
+        logger.info("trying again...")
+
 
     logger.error("Timeout reached. UNC path is still inaccessible.")
     return False
