@@ -6,7 +6,9 @@ import main
 
 @patch("main.copy_profile_root")
 @patch("main.copy_appdata_subdirs")
-@patch("main.prompt_for_input", side_effect=["RemotePC", "jdoe", "C:\\Backup", "y", "y"])
+@patch(
+    "main.prompt_for_input", side_effect=["RemotePC", "jdoe", "C:\\Backup", "y", "y"]
+)
 @patch("main.check_unc_access", return_value=True)
 @patch("main.ensure_directory")
 @patch("main.remove_mark_of_the_web_from_shortcuts")
@@ -18,10 +20,11 @@ def test_main_dry_run(
     mock_copy_appdata,
     mock_copy_root,
 ):
-    
+
     config = load_config()
 
     USER_PROFILE_SUBPATH: str = config["profile"]["USER_PROFILE_SUBPATH"]
+    APPDATA_NAME: List[str] = config["profile"]["APPDATA_NAME"]
     ROBOCOPY_OPTIONS: List[str] = config["robocopy"]["ROBOCOPY_OPTIONS"]
     ROBOCOPY_EXCLUDE_FILES: List[str] = config["robocopy"]["ROBOCOPY_EXCLUDE_FILES"]
     ROBOCOPY_EXCLUDE_DIRS: List[str] = config["robocopy"]["ROBOCOPY_EXCLUDE_DIRS"]
@@ -44,6 +47,7 @@ def test_main_dry_run(
         ROBOCOPY_OPTIONS,
         unc_path,
         dest_path,
+        exclude_dirs=APPDATA_NAME,
         exclude_files=ROBOCOPY_EXCLUDE_FILES,
         dry_run=True,
     )

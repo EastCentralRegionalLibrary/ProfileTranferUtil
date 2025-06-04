@@ -7,8 +7,9 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 logger = logging.getLogger(__name__)
 
 
-
-def resolve_exclude_paths(base_path: str, relative_excludes: Optional[List[str]]) -> Optional[List[str]]:
+def resolve_exclude_paths(
+    base_path: str, relative_excludes: Optional[List[str]]
+) -> Optional[List[str]]:
     """
     Resolves a list of relative directory names into full absolute paths
     under a given base directory. This is useful for building accurate /XD
@@ -72,12 +73,14 @@ def build_robocopy_command(
     # Add directory exclusions
     if exclude_dirs:
         cmd.append("/XD")
-        cmd.extend(quote_path(d) for d in exclude_dirs)
+        # cmd.extend(quote_path(d) for d in exclude_dirs)
+        cmd.extend(exclude_dirs)
 
     # Add file exclusions
     if exclude_files:
         cmd.append("/XF")
-        cmd.extend(quote_path(f) for f in exclude_files)
+        # cmd.extend(quote_path(f) for f in exclude_files)
+        cmd.extend(exclude_files)
 
     return cmd
 
@@ -126,6 +129,7 @@ def run_robocopy(
             stderr=subprocess.STDOUT,  # Merge stderr into stdout
             text=True,  # Decode output as text
             bufsize=1,  # Line-buffered reading
+            shell=True,
         )
         # Stream each line as it comes in
         if process.stdout:
@@ -179,25 +183,26 @@ def copy_profile_root(
     ROBOCOPY_OPTIONS: List[str],
     source_root: str,
     dest_root: str,
+    exclude_dirs: Optional[List[str]] = None,
     exclude_files: Optional[List[str]] = None,
     dry_run: bool = False,
 ):
     """
-    Copies the root of a user's profile directory excluding AppData and sensitive files.
+    Copies the root of a user's profile directory recommend excluding AppData and machine specific files.
 
     Args:
         source_root (str): UNC path to the user profile root.
         dest_root (str): Local destination path.
-        exclude_files (List[str], optional): Sensitive files to skip.
+        exclude_files (List[str], optional): Machine specific files to skip.
         dry_run (bool): If True, do not actually copy files.
     """
-    logger.info("Copying user profile root (excluding AppData)...")
+    logger.info("Copying user profile root...")
 
     robocopy_folder(
         ROBOCOPY_OPTIONS,
         source=source_root,
         destination=dest_root,
-        exclude_dirs=[source_root+"\\AppData"],
+        exclude_dirs=exclude_dirs,
         exclude_files=exclude_files,
         dry_run=dry_run,
     )
@@ -236,7 +241,7 @@ def copy_appdata_subdirs(
             ROBOCOPY_OPTIONS,
             source=src,
             destination=dst,
-            exclude_dirs=resolve_exclude_paths(source_root, exclude_dirs),
+            exclude_dirs=exclude_dirs,
             dry_run=dry_run,
         )
 

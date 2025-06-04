@@ -3,6 +3,9 @@
 [profile]
 # Default UNC path to users folder on remote / source
 USER_PROFILE_SUBPATH = "C$\\Users"
+APPDATA_NAME = [
+    "*AppData*",
+]
 
 [robocopy]
 # Common RoboCopy options (robust + multithreaded + restartable + logging-friendly)
@@ -12,29 +15,30 @@ ROBOCOPY_OPTIONS = [
     "/XJ",  # Exclude junction points to avoid recursion
     "/SL",  # Exclude symlinks to avoid recursion
     # "/MT:8",  # Multi-threaded copy (8 threads is robocopy default — adjust based on environment)
-    "/R:3",  # Retry 3 times on failed copies
+    "/R:1",  # Retry 1 time on failed copies
     "/W:5",  # Wait 5 seconds between retries
     # "/NFL",  # No file list (speeds up logging)
     # "/NDL",  # No directory list
     # "/NP",  # No progress shown in output
+    # "/L"  # Only list, do not run
 ]
 
 # Files known to be machine-specific, unneeded, or locked (registry hives, temp system files)
 ROBOCOPY_EXCLUDE_FILES = [
-    "NTUSER.DAT",
-    "ntuser.dat.LOG1",
-    "ntuser.dat.LOG2",
-    "UsrClass.dat",
-    "UsrClass.dat.LOG1",
-    "UsrClass.dat.LOG2",
+    "*NTUSER.DAT*",
+    "*ntuser.dat.LOG1*",
+    "*ntuser.dat.LOG2*",
+    "*.blf*",
+    "*.regtrans*",
+    "*UsrClass.dat*",
+    "*UsrClass.dat.LOG1*",
+    "*UsrClass.dat.LOG2*",
 ]
 
 # Subfolders within included folders (e.g., Chrome) that should be skipped due to size or irrelevance
 ROBOCOPY_EXCLUDE_DIRS = [
-    "AppData\\Local\\Google\\Chrome\\User Data\\Default\\Cache",
-    "AppData\\Local\\Google\\Chrome\\User Data\\Default\\Code Cache",
-    "AppData\\Local\\Microsoft\\Edge\\User Data\\Default\\Cache",
-    "AppData\\Local\\Microsoft\\Edge\\User Data\\Default\\Code Cache",
+    "*Cache*",
+    "*Code Cache*",
 ]
 
 # Folders under AppData\Local worth migrating to preserve user data and settings

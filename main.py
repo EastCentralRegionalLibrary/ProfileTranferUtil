@@ -49,7 +49,7 @@ def build_unc_source(
     """
     Constructs the UNC path to the user's profile directory.
     """
-    return rf"\\{remote_machine}\{USER_PROFILE_SUBPATH}\{user_name}"
+    return "\\\\" + remote_machine + "\\" + USER_PROFILE_SUBPATH + "\\" + user_name
 
 
 def prompt_for_input(prompt_text: str, default: str = None) -> str:
@@ -113,6 +113,7 @@ def main():
     config = load_config()
 
     USER_PROFILE_SUBPATH: str = config["profile"]["USER_PROFILE_SUBPATH"]
+    APPDATA_NAME: List[str] = config["profile"]["APPDATA_NAME"]
     ROBOCOPY_OPTIONS: List[str] = config["robocopy"]["ROBOCOPY_OPTIONS"]
     ROBOCOPY_EXCLUDE_FILES: List[str] = config["robocopy"]["ROBOCOPY_EXCLUDE_FILES"]
     ROBOCOPY_EXCLUDE_DIRS: List[str] = config["robocopy"]["ROBOCOPY_EXCLUDE_DIRS"]
@@ -153,6 +154,7 @@ def main():
         ROBOCOPY_OPTIONS,
         unc_source,
         destination,
+        exclude_dirs=APPDATA_NAME,
         exclude_files=ROBOCOPY_EXCLUDE_FILES,
         dry_run=dry_run,
     )

@@ -33,6 +33,7 @@ ROBOCOPY_OPTIONS = [
     # "/NDL",  # No directory list
     # "/NP",  # No progress shown in output
 ]
+APPDATA_NAME = ["AppData"]
 
 
 @patch("subprocess.Popen")
@@ -74,7 +75,7 @@ def test_copy_profile_root(mock_popen):
     mock_process.returncode = 0
     mock_popen.return_value = mock_process
 
-    copy_profile_root(ROBOCOPY_OPTIONS, SOURCE, DEST, EXCLUDE_FILES)
+    copy_profile_root(ROBOCOPY_OPTIONS, SOURCE, DEST, APPDATA_NAME, EXCLUDE_FILES)
     args = mock_popen.call_args[0][0]
     assert "/XD" in args
     assert "/XF" in args
