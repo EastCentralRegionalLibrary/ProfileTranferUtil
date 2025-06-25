@@ -5,9 +5,6 @@ from typing import List, Optional
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 # Configure logging
-logging.basicConfig(
-    level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
-)
 logger = logging.getLogger(__name__)
 
 
@@ -117,8 +114,8 @@ def run_regexport(
 def reg_export(
     src: List[str],
     dst_directory: str,
-    dry_run: bool = False,
     use_psexec: bool = True,
+    dry_run: bool = False,
     psexec_custom_path: Optional[str] = None,
 ):
     """
@@ -158,7 +155,8 @@ def reg_export(
                 return
 
     # Ensure the destination directory exists
-    os.makedirs(dst_directory, exist_ok=True)
+    dest = os.path.normpath(dst_directory)
+    os.makedirs(dest, exist_ok=True)
     logger.info(f"Ensured destination directory exists: {dst_directory}")
 
     def export_single_path(single_path: str):
@@ -197,7 +195,7 @@ def reg_export(
 
         # Iterate over completed futures as they finish
         for future in as_completed(futures):
-            entry = futures[
+            finished_entry = futures[
                 future
             ]  # Get the original source path for the completed future
             try:
@@ -205,11 +203,11 @@ def reg_export(
                     future.result()
                 )  # Retrieve the result (exit code) of the task
                 logger.info(
-                    f"[Thread] Finished exporting '{entry}' with exit code {exit_code}"
+                    f"[Thread] Finished exporting '{finished_entry}' with exit code {exit_code}"
                 )
             except Exception as e:
                 # Log any exceptions that occurred during the execution of a task
-                logger.exception(f"[Thread] Error exporting '{entry}': {e}")
+                logger.exception(f"[Thread] Error exporting '{finished_entry}': {e}")
 
     logger.info("Finished all registry export operations.")
 

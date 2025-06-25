@@ -20,28 +20,31 @@ from load_config import load_config
 # )
 
 # Set up logger
-
-# Create a logs directory
-os.makedirs("logs", exist_ok=True)
-
-# Timestamped log filename
-log_filename = datetime.now().strftime("logs/sync_%Y%m%d_%H%M%S.log")
-
-# Set up root logger
 logger = logging.getLogger()
-logger.setLevel(logging.INFO)
 
-# Console handler
-console_handler = logging.StreamHandler()
-console_handler.setFormatter(logging.Formatter("%(message)s"))
-logger.addHandler(console_handler)
 
-# File handler
-file_handler = logging.FileHandler(log_filename, encoding="utf-8")
-file_handler.setFormatter(
-    logging.Formatter("%(asctime)s - %(levelname)s - %(message)s")
-)
-logger.addHandler(file_handler)
+def setup_logger():
+    # Create a logs directory
+    os.makedirs("logs", exist_ok=True)
+
+    # Timestamped log filename
+    log_filename = datetime.now().strftime("logs/sync_%Y%m%d_%H%M%S.log")
+
+    # Set up root logger
+    logger = logging.getLogger()
+    logger.setLevel(logging.INFO)
+
+    # Console handler
+    console_handler = logging.StreamHandler()
+    console_handler.setFormatter(logging.Formatter("%(message)s"))
+    logger.addHandler(console_handler)
+
+    # File handler
+    file_handler = logging.FileHandler(log_filename, encoding="utf-8")
+    file_handler.setFormatter(
+        logging.Formatter("%(asctime)s - %(levelname)s - %(message)s")
+    )
+    logger.addHandler(file_handler)
 
 
 def build_unc_source(remote_machine: str, subpath: str, folder: str) -> str:
@@ -78,10 +81,9 @@ def parse_args() -> argparse.Namespace:
         "-d", "--destination", help="Local destination path to copy data into"
     )
     parser.add_argument(
-        "-p",
-        "--psexec",
-        action="store_false",
-        help="Use user context to export local registry entries ( not using PsExec for current session )",
+        "--no-psexec",
+        action="store_true",  # If this flag is present, args.no_psexec will be True
+        help="Do NOT use PsExec for registry exports. By default, PsExec is used to run exports in the current logged-in user's session (session 1). If this flag is set, exports will run in the current process context (typically Admin privileges).",
     )
     parser.add_argument(
         "--dryrun",
@@ -109,13 +111,14 @@ def main():
     """
     args = parse_args()
     dry_run: bool = args.dryrun or False
-    psexec: bool = args.psexec or True
+    use_psexec: bool = not args.no_psexec
     remote_machine = args.machine or prompt_for_input("Enter remote machine name or IP")
     user_name = args.username or prompt_for_input("Enter remote user name")
     destination = args.destination or prompt_for_input(
         "Enter destination path", default=str(Path.cwd())
     )
 
+    setup_logger()
     config = load_config()
 
     SYS_DISK: str = config["profile"]["SYS_DISK"]
@@ -219,11 +222,13 @@ def main():
     if confirm.lower() not in ("y", "yes"):
         logger.info("Operation cancelled by user.")
     else:
-        destination = args.destination
+        destination = args.destination or prompt_for_input(
+            "Enter destination path", default=str(Path.cwd())
+        )
         reg_export(
             REGISTRY_INCLUDES,
             destination,
-            psexec,
+            use_psexec,
             dry_run,
         )
 
