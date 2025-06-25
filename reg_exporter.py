@@ -1,7 +1,7 @@
 import os
 import subprocess
 import logging
-from typing import List
+from typing import List, Optional
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 # Configure logging
@@ -11,29 +11,70 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
+def find_executable(executable_name: str) -> Optional[str]:
+    """
+    Searches for an executable in the system's PATH.
+
+    Args:
+        executable_name (str): The name of the executable (e.g., "psexec.exe").
+
+    Returns:
+        Optional[str]: The full path to the executable if found, otherwise None.
+    """
+    # Check if the executable is in the current working directory
+    if os.path.exists(executable_name) and os.path.isfile(executable_name):
+        logger.info(
+            f"Found '{executable_name}' in current directory: {os.path.abspath(executable_name)}"
+        )
+        return os.path.abspath(executable_name)
+
+    # Search in system PATH
+    for path in os.environ["PATH"].split(os.pathsep):
+        full_path = os.path.join(path, executable_name)
+        if os.path.exists(full_path) and os.path.isfile(full_path):
+            logger.info(f"Found '{executable_name}' in PATH: {full_path}")
+            return full_path
+    logger.warning(
+        f"Executable '{executable_name}' not found in PATH or current directory."
+    )
+    return None
+
+
 def run_regexport(
     source: str,
     destination_file: str,
     dry_run: bool = False,
+    psexec_path: Optional[str] = None,
 ) -> int:
     """
     Executes the 'reg export' command to export a specified registry key
-    to a destination .reg file.
+    to a destination .reg file, optionally using PsExec.
 
     Args:
         source (str): The full path to the registry key or hive to export (e.g.,
             "HKEY_CURRENT_USER\\Software\\Microsoft").
         destination_file (str): The full path to the .reg file where the export
-                                will be saved.
+                                 will be saved.
         dry_run (bool): If True, the command will be logged but not executed.
+        psexec_path (Optional[str]): The full path to the PsExec.exe executable.
+                                     If provided, PsExec will be used to run the command
+                                     as the logged-in user (session 1).
 
     Returns:
-        int: The exit code of the 'reg export' command, or -1 if an exception occurs.
+        int: The exit code of the command, or -1 if an exception occurs.
     """
-    # Construct the command for reg export
-    # Note: Using shell=True for simplicity with 'reg' command on Windows.
-    # Be cautious if 'source' or 'destination_file' come from untrusted input.
-    cmd = f'reg export "{source}" "{destination_file}" /y'  # /y to overwrite without prompt
+    # Construct the base 'reg export' command
+    reg_cmd = f'reg export "{source}" "{destination_file}" /y'
+
+    # If psexec_path is provided, prepend PsExec command
+    if psexec_path:
+        # Use -i 1 for interactive session 1, and -h to run with elevated privileges
+        # Enclose the reg_cmd in quotes to pass it as a single argument to PsExec
+        cmd = f'"{psexec_path}" -i 1 -h cmd /c "{reg_cmd}"'
+        logger.info(f"Using PsExec: {psexec_path}")
+    else:
+        cmd = reg_cmd
+        logger.info("Not using PsExec.")
 
     if dry_run:
         logger.info(f"[Dry Run] Command: '{cmd}' (not executed).")
@@ -41,6 +82,8 @@ def run_regexport(
 
     logger.info(f"Executing command: '{cmd}'")
     try:
+        # Use shell=True for simpler command execution, especially with complex quoting
+        # when PsExec is involved. Be cautious with untrusted input for 'source'/'destination_file'.
         process = subprocess.Popen(
             cmd,
             stdout=subprocess.PIPE,
@@ -61,19 +104,26 @@ def run_regexport(
         )
         return returncode
 
+    except FileNotFoundError:
+        logger.error(
+            f"Command or PsExec executable not found. Ensure PsExec is in PATH or specified correctly: {cmd}"
+        )
+        return -1
     except Exception as e:
-        logger.exception(f"Failed to execute 'reg export' for '{source}': {e}")
+        logger.exception(f"Failed to execute command for '{source}': {e}")
         return -1
 
 
 def reg_export(
     src: List[str],
-    dst_directory: str,  # Renamed to clarify it's a directory
+    dst_directory: str,
     dry_run: bool = False,
+    use_psexec: bool = True,
+    psexec_custom_path: Optional[str] = None,
 ):
     """
     Exports multiple registry keys concurrently to separate .reg files
-    within a specified destination directory.
+    within a specified destination directory, optionally using PsExec.
 
     Args:
         src (List[str]): A list of full paths to the registry keys or hives
@@ -81,7 +131,31 @@ def reg_export(
         dst_directory (str): The path to the directory where the exported .reg files
             will be saved. Each export will create a unique file here.
         dry_run (bool): If True, commands will be logged but not executed.
+        use_psexec (bool): If True, PsExec will be used to run the 'reg export' commands.
+        psexec_custom_path (Optional[str]): A custom path to PsExec.exe if it's not
+                                             in the system PATH.
     """
+
+    psexec_executable_path = None
+    if use_psexec:
+        if psexec_custom_path:
+            psexec_executable_path = psexec_custom_path
+            if not (
+                os.path.exists(psexec_executable_path)
+                and os.path.isfile(psexec_executable_path)
+            ):
+                logger.critical(
+                    f"PsExec executable not found at specified custom path: {psexec_custom_path}"
+                )
+                return
+        else:
+            psexec_executable_path = find_executable("PsExec.exe")
+            if not psexec_executable_path:
+                logger.critical(
+                    "PsExec.exe not found in system PATH or current directory. "
+                    "Please add it to PATH or provide 'psexec_custom_path'."
+                )
+                return
 
     # Ensure the destination directory exists
     os.makedirs(dst_directory, exist_ok=True)
@@ -108,6 +182,7 @@ def reg_export(
             source=single_path,
             destination_file=destination_file,
             dry_run=dry_run,
+            psexec_path=psexec_executable_path,
         )
 
     logger.info("Starting concurrent export of registry items...")
@@ -139,21 +214,49 @@ def reg_export(
     logger.info("Finished all registry export operations.")
 
 
-# Example Usage (uncomment to test)
+# # Example Usage (uncomment to test)
 # if __name__ == "__main__":
 #     # Define some registry paths to export
 #     registry_paths_to_export = [
 #         "HKEY_CURRENT_USER\\Software\\Microsoft\\Windows\\CurrentVersion\\Run",
 #         "HKEY_LOCAL_MACHINE\\SOFTWARE\\Policies\\Microsoft\\Windows\\Installer",
-#         "HKEY_LOCAL_MACHINE\\SYSTEM\\CurrentControlSet\\Control\\Session Manager\\Environment"
+#         "HKEY_LOCAL_MACHINE\\SYSTEM\\CurrentControlSet\\Control\\Session Manager\\Environment",
 #     ]
 
 #     # Define the destination directory for the .reg files
-#     output_directory = "C:\\RegExports" # IMPORTANT: Choose a directory where you have write permissions
+#     # IMPORTANT: Choose a directory where you have write permissions
+#     output_directory = "C:\\RegExports"
 
-#     # Run the export (set dry_run=True to test without actual export)
+#     # --- Example 1: Dry run without PsExec ---
+#     logger.info("\n--- Running Dry Run (no PsExec) ---")
 #     reg_export(
 #         src=registry_paths_to_export,
 #         dst_directory=output_directory,
-#         dry_run=False  # Set to True for a dry run, False for actual export
+#         dry_run=True,
+#         use_psexec=False,
+#     )
+
+#     # --- Example 2: Actual export using PsExec (if found) ---
+#     logger.info(
+#         "\n--- Attempting Actual Export with PsExec (requires PsExec.exe in PATH or custom path) ---"
+#     )
+#     # You can set psexec_custom_path if PsExec.exe is not in your system's PATH.
+#     # For example: psexec_custom_path="C:\\SysinternalsSuite\\PsExec.exe"
+#     reg_export(
+#         src=registry_paths_to_export,
+#         dst_directory=output_directory,
+#         dry_run=False,  # Set to True for a dry run, False for actual export
+#         use_psexec=True,
+#         psexec_custom_path=None,  # Set to "path/to/PsExec.exe" if not in PATH
+#     )
+
+#     # --- Example 3: Demonstrate what happens if PsExec is requested but not found ---
+#     logger.info("\n--- Demonstrating PsExec not found scenario ---")
+#     # This will log a critical error if PsExec.exe is not found
+#     reg_export(
+#         src=["HKEY_CURRENT_USER\\Control Panel\\Desktop"],
+#         dst_directory="C:\\RegExports_Test",
+#         dry_run=False,
+#         use_psexec=True,
+#         psexec_custom_path="C:\\NonExistentPath\\PsExec.exe",  # This path should not exist
 #     )

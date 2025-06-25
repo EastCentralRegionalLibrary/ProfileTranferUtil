@@ -78,6 +78,12 @@ def parse_args() -> argparse.Namespace:
         "-d", "--destination", help="Local destination path to copy data into"
     )
     parser.add_argument(
+        "-p",
+        "--psexec",
+        action="store_false",
+        help="Use user context to export local registry entries ( not using PsExec for current session )",
+    )
+    parser.add_argument(
         "--dryrun",
         action="store_true",
         help="Simulate the copy operations without executing them",
@@ -103,6 +109,7 @@ def main():
     """
     args = parse_args()
     dry_run: bool = args.dryrun or False
+    psexec: bool = args.psexec or True
     remote_machine = args.machine or prompt_for_input("Enter remote machine name or IP")
     user_name = args.username or prompt_for_input("Enter remote user name")
     destination = args.destination or prompt_for_input(
@@ -216,6 +223,7 @@ def main():
         reg_export(
             REGISTRY_INCLUDES,
             destination,
+            psexec,
             dry_run,
         )
 
