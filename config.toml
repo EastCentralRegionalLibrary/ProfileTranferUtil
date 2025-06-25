@@ -75,4 +75,5 @@ PROGRAM_FILES_X86_INCLUDE_DIRS = [
 REGISTRY_INCLUDES = [
     "HKCU\\Network",
     "HKCU\\Printers",
+    "HKCU\\SOFTWARE\Zultys",
 ]
