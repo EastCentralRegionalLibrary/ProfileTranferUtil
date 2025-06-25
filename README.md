@@ -11,7 +11,8 @@
 * 📁 Configurable includes and excludes via `config.toml`.
 * 💨 Dry-run mode for safe simulations before committing file copies.
 * 🧹 Post-processing support like removing Mark of the Web (MotW) from `.lnk` files.
-
+* ⚙️ Registry Export with PsExec: Export specified registry keys to .reg files, optionally using PsExec to run as the logged-in user (session 1) for appropriate permissions.
+* 🔍 PsExec Verification: Automatically checks for PsExec.exe in PATH or a specified custom location before execution.
 ---
 
 ## Installation
@@ -21,6 +22,7 @@
 * Python 3.8+
 * Windows OS with `robocopy` available (built-in on modern versions)
 * PyInstaller (optional, for packaging)
+* PsExec.exe (optional, for registry export functionality - available from Sysinternals Suite)
 * Optional dependencies:
 
   * [`toml`](https://pypi.org/project/toml/) (install via `pip install toml`)
@@ -41,6 +43,7 @@ All settings are managed via a `config.toml` file, which defines:
 * Profile path structure
 * Robocopy arguments
 * Include/exclude folder rules
+* Include registry paths
 
 If `config.toml` is not found in the working directory, the default version bundled with the executable will be extracted.
 
@@ -51,10 +54,10 @@ If `config.toml` is not found in the working directory, the default version bund
 ### From Source
 
 ```bash
-python main.py [--machine REMOTE_HOST] [--username USER] [--destination DEST_PATH] [--dryrun]
+python main.py [--machine REMOTE_HOST] [--username USER] [--destination DEST_PATH] [--psexec] [--dryrun]
 ```
 
-If any parameters are omitted, they will be prompted interactively.
+If any required parameters are omitted, they will be prompted interactively.
 
 #### Example
 
@@ -68,9 +71,15 @@ python main.py --machine WS-07 --username jsmith --destination D:\Backups\jsmith
 
 Use the `--dryrun` flag to simulate the copy process without making changes:
 
-```bash
-python main.py --dryrun
-```
+## PsExec
+
+Use the `--psexec` flag to disable the use of PsExec for registry exports.
+
+Note on PsExec:
+
+    Ensure PsExec.exe is either in your system's PATH environment variable, in the same directory as the script, or provide its full path via the psexec_custom_path argument if calling reg_export directly.
+
+    Using PsExec which is enabled by default will attempt to run the reg export command interactively in session 1 with elevated privileges.
 
 ---
 
