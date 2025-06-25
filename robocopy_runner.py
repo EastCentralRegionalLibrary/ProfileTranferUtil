@@ -98,6 +98,7 @@ def run_robocopy(
     Executes RoboCopy from source to destination, applying given options.
 
     Args:
+        ROBOCOPY_OPTIONS List[str]: options to pass to RoboCopy
         source (str): Source directory (UNC or local).
         destination (str): Destination directory (local).
         additional_options (List[str], optional): RoboCopy switches beyond defaults.
@@ -158,6 +159,7 @@ def robocopy_folder(
     Wrapper for RoboCopy with simplified interface for one folder.
 
     Args:
+        ROBOCOPY_OPTIONS List[str]: options to pass to RoboCopy
         source (str): Full source path.
         destination (str): Destination path.
         exclude_files (List[str], optional): Files to exclude.
@@ -191,8 +193,10 @@ def copy_profile_root(
     Copies the root of a user's profile directory recommend excluding AppData and machine specific files.
 
     Args:
+        ROBOCOPY_OPTIONS List[str]: options to pass to RoboCopy
         source_root (str): UNC path to the user profile root.
         dest_root (str): Local destination path.
+        exclude_dirs (List[str], optional): Machine specific directories to skip.
         exclude_files (List[str], optional): Machine specific files to skip.
         dry_run (bool): If True, do not actually copy files.
     """
@@ -208,6 +212,60 @@ def copy_profile_root(
     )
 
 
+def copy_program_files(
+    ROBOCOPY_OPTIONS: List[str],
+    source_root: str,
+    dest_root: str,
+    subdirs: List[str],
+    exclude_dirs: Optional[List[str]] = None,
+    exclude_files: Optional[List[str]] = None,
+    dry_run: bool = False,
+):
+    """
+    Copies the files and folders from the source path to the destination excluding specific files and directories.
+
+    Args:
+        ROBOCOPY_OPTIONS List[str]: options to pass to RoboCopy
+        source_root (str): UNC path to the source folder.
+        dest_root (str): Local destination path.
+        subdirs (List[str]): Relative paths to subfolders under Program Files x86 to include.
+        exclude_dirs (List[str], optional): Machine specific directories to skip.
+        exclude_files (List[str], optional): Machine specific files to skip.
+        dry_run (bool): If True, do not actually copy files.
+    """
+    def copy_single_subdir(rel_path: str):
+        src = os.path.join(source_root, rel_path)
+        dst = os.path.join(dest_root, rel_path)
+
+        if not dry_run:
+            logger.info(f"[Thread] Creating Program Files x86 subfolder: {rel_path}")
+            os.makedirs(dst, exist_ok=True)
+        else:
+            logger.info(f"[Thread] Skipping folder creation (dry run): {rel_path}")
+
+        return robocopy_folder(
+            ROBOCOPY_OPTIONS,
+            source=src,
+            destination=dst,
+            exclude_dirs=exclude_dirs,
+            dry_run=dry_run,
+        )
+
+    logger.info(f"Starting threaded copy of {len(subdirs)} Program Files x86 subfolders...")
+    with ThreadPoolExecutor(max_workers=min(6, len(subdirs))) as executor:
+        futures = {
+            executor.submit(copy_single_subdir, subdir): subdir for subdir in subdirs
+        }
+
+        for future in as_completed(futures):
+            subdir = futures[future]
+            try:
+                exit_code = future.result()
+                logger.info(f"[Thread] Finished {subdir} with exit code {exit_code}")
+            except Exception as e:
+                logger.exception(f"[Thread] Error copying {subdir}: {e}")
+
+
 def copy_appdata_subdirs(
     ROBOCOPY_OPTIONS: List[str],
     source_root: str,
@@ -220,6 +278,7 @@ def copy_appdata_subdirs(
     Copies individual AppData subfolders in parallel using threads.
 
     Args:
+        ROBOCOPY_OPTIONS List[str]: options to pass to RoboCopy
         source_root (str): UNC path to profile root.
         dest_root (str): Local destination profile root.
         subdirs (List[str]): Relative paths to subfolders under AppData to include.

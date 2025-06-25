@@ -7,7 +7,8 @@ from pathlib import Path
 from typing import List
 from unc_utils import check_unc_access, prompt_user_to_authenticate
 from remove_motw import remove_mark_of_the_web_from_shortcuts
-from robocopy_runner import copy_profile_root, copy_appdata_subdirs
+from robocopy_runner import copy_profile_root, copy_appdata_subdirs, copy_program_files
+from reg_exporter import reg_export
 from load_config import load_config
 
 # from constants import (
@@ -43,13 +44,11 @@ file_handler.setFormatter(
 logger.addHandler(file_handler)
 
 
-def build_unc_source(
-    remote_machine: str, USER_PROFILE_SUBPATH: str, user_name: str
-) -> str:
+def build_unc_source(remote_machine: str, subpath: str, folder: str) -> str:
     """
-    Constructs the UNC path to the user's profile directory.
+    Constructs the UNC path to the source directory.
     """
-    return rf"\\{remote_machine}\{USER_PROFILE_SUBPATH}\{user_name}"
+    return rf"\\{remote_machine}\{subpath}\{folder}"
 
 
 def prompt_for_input(prompt_text: str, default: str = None) -> str:
@@ -112,6 +111,8 @@ def main():
 
     config = load_config()
 
+    SYS_DISK: str = config["profile"]["SYS_DISK"]
+    PROGRAM_FILES_DIR: str = config["profile"]["PROGRAM_FILES_DIR"]
     USER_PROFILE_SUBPATH: str = config["profile"]["USER_PROFILE_SUBPATH"]
     APPDATA_NAME: List[str] = config["profile"]["APPDATA_NAME"]
     ROBOCOPY_OPTIONS: List[str] = config["robocopy"]["ROBOCOPY_OPTIONS"]
@@ -123,6 +124,10 @@ def main():
     APPDATA_ROAMING_INCLUDE_DIRS: List[str] = config["robocopy"][
         "APPDATA_ROAMING_INCLUDE_DIRS"
     ]
+    PROGRAM_FILES_X86_INCLUDE_DIRS: List[str] = config["programs"][
+        "PROGRAM_FILES_X86_INCLUDE_DIRS"
+    ]
+    REGISTRY_INCLUDES: List[str] = config["registry"]["REGISTRY_INCLUDES"]
 
     if not remote_machine or not user_name:
         logger.error("Remote machine name and username are required.")
@@ -184,6 +189,36 @@ def main():
     remove_mark_of_the_web_from_shortcuts(desktop_path)
 
     logger.info("Profile transfer complete.")
+
+    # Step 8: Optional Evergreen Web Client transfer
+    confirm = prompt_for_input("Copy Program Files directories? (y/n)", default="n")
+    if confirm.lower() not in ("y", "yes"):
+        logger.info("Operation cancelled by user.")
+    else:
+        destination = args.destination or prompt_for_input(
+            "Enter destination disk", default="C:"
+        )
+        copy_program_files(
+            ROBOCOPY_OPTIONS,
+            build_unc_source(remote_machine, SYS_DISK, PROGRAM_FILES_DIR),
+            destination + "\\" + PROGRAM_FILES_DIR,
+            PROGRAM_FILES_X86_INCLUDE_DIRS,
+            exclude_dirs=ROBOCOPY_EXCLUDE_DIRS,
+            dry_run=dry_run,
+        )
+
+    # Step 9: Optional registry exports such as net drives and printers
+    confirm = prompt_for_input("Export local registry entries? (y/n)", default="n")
+    if confirm.lower() not in ("y", "yes"):
+        logger.info("Operation cancelled by user.")
+    else:
+        destination = args.destination
+        reg_export(
+            REGISTRY_INCLUDES,
+            destination,
+            dry_run,
+        )
+
     confirm = prompt_for_input(
         "Please review output ( press any key to exit )", default="y"
     )

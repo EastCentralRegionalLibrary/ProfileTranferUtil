@@ -2,6 +2,8 @@
 
 [profile]
 # Default UNC path to users folder on remote / source
+SYS_DISK = "C$"
+PROGRAM_FILES_DIR = "Program Files (x86)"
 USER_PROFILE_SUBPATH = "C$\\Users"
 APPDATA_NAME = [
     "*AppData*",
@@ -39,6 +41,7 @@ ROBOCOPY_EXCLUDE_FILES = [
 ROBOCOPY_EXCLUDE_DIRS = [
     "*Cache*",
     "*Code Cache*",
+    "*morgue*",
 ]
 
 # Folders under AppData\Local worth migrating to preserve user data and settings
@@ -59,4 +62,17 @@ APPDATA_ROAMING_INCLUDE_DIRS = [
     "AppData\\Roaming\\Microsoft\\Windows\\Recent",  # Recent items (shortcuts)
     "AppData\\Roaming\\Microsoft\\Windows\\Recent\\AutomaticDestinations",  # Jump lists (auto)
     "AppData\\Roaming\\Microsoft\\Windows\\Recent\\CustomDestinations",  # Jump lists (custom)
+]
+
+[programs]
+# Program Files x86 includes - Firefox portable profiles for Evergreen client
+PROGRAM_FILES_X86_INCLUDE_DIRS = [
+    "Evergreen Web Client\\Data",
+]
+
+[registry]
+# Registry includes - mapped network drives etc.
+REGISTRY_INCLUDES = [
+    "HKCU\\Network",
+    "HKCU\\Printers",
 ]
