@@ -59,6 +59,7 @@ APPDATA_LOCAL_INCLUDE_DIRS = [
 APPDATA_ROAMING_INCLUDE_DIRS = [
     "AppData\\Roaming\\Mozilla",
     "AppData\\Roaming\\OpenILS",
+    "AppData\\Roaming\\org.evergreen_ils.hatch.Hatch,"
     "AppData\\Roaming\\Microsoft\\Windows\\Recent",  # Recent items (shortcuts)
     "AppData\\Roaming\\Microsoft\\Windows\\Recent\\AutomaticDestinations",  # Jump lists (auto)
     "AppData\\Roaming\\Microsoft\\Windows\\Recent\\CustomDestinations",  # Jump lists (custom)
