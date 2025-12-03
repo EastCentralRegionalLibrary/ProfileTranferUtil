@@ -1,6 +1,18 @@
 # ProfileTranferUtil
 
-**ProfileTransferUtil** is a CLI utility for securely copying a user's Windows profile from a remote machine to a local destination. It uses `robocopy` under the hood and supports selectively syncing `AppData` folders, excluding temporary files, and performing safe dry runs. Ideal for IT professionals handling user migrations or profile backups.
+**ProfileTransferUtil** is a CLI utility for copying a user's Windows profile from a remote ( or local with 127.0.0.1 ) machine to a local destination. It uses `robocopy` and `psexec` under the hood and supports selectively syncing *local* registry keys, `AppData` folders, excluding temporary files, and performing safe dry runs. Ideal for IT professionals handling user migrations or profile backups.
+
+---
+## Disclaimer
+
+⚠️ **Warning:** This tool is under active development and may not be suitable for production use. While it is functional for internal testing and migration tasks it has not been fully validated for production environments. Use with caution! Perform dry runs and validate all outputs before committing changes. 
+
+This software is provided "as is" without any warranties, express or implied.  
+By using this tool, you acknowledge and agree that:
+
+* The author(s) and contributors shall not be held liable for any data loss, corruption, damage, or other issues arising from the use, misuse, or inability to use this software.
+* You assume full responsibility for verifying outputs and ensuring backups before performing any operations.
+* Use at your own risk!
 
 ---
 
@@ -11,7 +23,7 @@
 * 📁 Configurable includes and excludes via `config.toml`.
 * 💨 Dry-run mode for safe simulations before committing file copies.
 * 🧹 Post-processing support like removing Mark of the Web (MotW) from `.lnk` files.
-* ⚙️ Registry Export with PsExec: Export specified registry keys to .reg files, optionally using PsExec to run as the logged-in user (session 1) for appropriate permissions.
+* ⚙️ Registry Export with PsExec: Export specified local registry keys to .reg files, optionally using PsExec to run as the logged-in user (session 1) for appropriate permissions.
 * 🔍 PsExec Verification: Automatically checks for PsExec.exe in PATH or a specified custom location before execution.
 ---
 
